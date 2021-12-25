@@ -144,7 +144,6 @@ void plotLineLow(int x0, int y0, int x1, int y1){
     glBegin(GL_POINTS);
             glVertex2i(x0,y);
     glEnd();
-    glFlush();
     int yold = 0;
     //start the algorithm until the end point
     for(int x = x0; x < x1; x++){
@@ -170,7 +169,6 @@ void plotLineLow(int x0, int y0, int x1, int y1){
             glColor3f(e*r,e*g,e*b);
             glVertex2i(x,y);
         glEnd();
-        glFlush();
     }
 
     glFlush();
@@ -204,7 +202,6 @@ void plotLineHigh(int x0, int y0, int x1, int y1){
         glBegin(GL_POINTS);
             glVertex2i(x,y0);
         glEnd();
-        glFlush();
     int xold = 0;
     for(int y = y0; y < y1; y++){
         xold = x;
@@ -228,7 +225,6 @@ void plotLineHigh(int x0, int y0, int x1, int y1){
             glColor3f(e*r,e*g,e*b);
             glVertex2i(x,y);
         glEnd();
-        glFlush();
     }
     glFlush();
 }
