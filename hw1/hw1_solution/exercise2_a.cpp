@@ -36,6 +36,86 @@ void drawPoint( int ax, int ay)
 	glFlush();
 }
 
+void drawEllipsePoints(int x, int y, int xc, int yc){
+    //point in quadrant 1
+    glBegin(GL_POINTS);
+		glVertex2i(xc + x, yc + y);
+	glEnd();
+    //point in quadrant 2
+    glBegin(GL_POINTS);
+		glVertex2i(xc - x, yc + y);
+	glEnd();
+    //point in quadrant 3
+    glBegin(GL_POINTS);
+		glVertex2i(xc - x, yc - y);
+	glEnd();
+    //point in quadrant 4
+    glBegin(GL_POINTS);
+		glVertex2i(xc + x, yc - y);
+	glEnd();
+	glFlush();
+}
+//bresenham ellipse
+void plotEllipse(int a, int b, int xc, int yc){
+    //set initial values 1st region
+    int x = a, y = 0; //Starting point
+    int a_sq_2 = 2 * a*a; 
+    int b_sq_2 = 2*b*b; 
+    
+    int xchange = (b^2)*(1 - 2*a);
+    int ychange = a^2;
+
+    int xstop = b_sq_2*a;
+    int ystop = 0;
+    //error rate
+    int e0 = 0;
+    //int D = 4*(b^2) + ((a^2)*(1 - 4*b)-2);
+
+    while(xstop >= ystop){      //1st quadrant, 4 first points
+        drawEllipsePoints(x, y, xc, yc);
+        y = y + 1;
+        ystop += a_sq_2;
+        e0 += ychange;
+        ychange += a_sq_2;
+        if((2*e0 + xchange) > 0){
+            x = x -1;
+            xstop = xstop - b_sq_2;
+            e0 = e0 + xchange;
+            xchange = xchange + b_sq_2;
+        }
+
+    }
+
+    //set initial values 2nd region
+    x = 0, y = b; //Starting point
+
+    xchange = (b^2);
+    ychange = (a^2)*(1 - 2*b);
+
+    xstop = 0;
+    ystop = a_sq_2*b;
+    //error rate
+    e0 = 0;
+    //int D = 4*(b^2) + ((a^2)*(1 - 4*b)-2);
+
+    while(xstop <= ystop){      //4 second points, dy<-1
+        drawEllipsePoints(x, y, xc, yc);
+        x = x + 1;
+        xstop += b_sq_2;
+        e0 += xchange;
+        xchange += b_sq_2;
+        if((2*e0 + ychange) > 0){
+            y = y -1;
+            ystop = ystop - a_sq_2;
+            e0 = e0 + ychange;
+            ychange = ychange + a_sq_2;
+        }
+
+    }
+
+    
+}
+
 void plotLineLow(int x0, int y0, int x1, int y1){
     //set initial values
     int r = 0.0; int g = 0.0; int b = 1.0;
@@ -64,6 +144,7 @@ void plotLineLow(int x0, int y0, int x1, int y1){
     glBegin(GL_POINTS);
             glVertex2i(x0,y);
     glEnd();
+    glFlush();
     int yold = 0;
     //start the algorithm until the end point
     for(int x = x0; x < x1; x++){
@@ -89,6 +170,7 @@ void plotLineLow(int x0, int y0, int x1, int y1){
             glColor3f(e*r,e*g,e*b);
             glVertex2i(x,y);
         glEnd();
+        glFlush();
     }
 
     glFlush();
@@ -122,6 +204,7 @@ void plotLineHigh(int x0, int y0, int x1, int y1){
         glBegin(GL_POINTS);
             glVertex2i(x,y0);
         glEnd();
+        glFlush();
     int xold = 0;
     for(int y = y0; y < y1; y++){
         xold = x;
@@ -145,7 +228,7 @@ void plotLineHigh(int x0, int y0, int x1, int y1){
             glColor3f(e*r,e*g,e*b);
             glVertex2i(x,y);
         glEnd();
-        
+        glFlush();
     }
     glFlush();
 }
@@ -183,6 +266,14 @@ void bresenhamLine(int x0, int y0, int x1, int y1)
 	glFlush();*/
 }
 
+void bresenhamEllipse(int xc, int yc, int xa, int ya, int xb, int yb)
+{
+    //initial values of algorithm
+    int a = abs(xc - xa);
+    int b = abs(yc - yb);
+    plotEllipse(a, b, xc, yc);
+
+}
 void myInit (void)
 {
 	//glClearColor(0.5, 0.5, 0.5, 0.0);    // select clearing (background) color
@@ -213,7 +304,7 @@ void myDisplay(void)
  //Specifying a rectangle with the mouse
 void myMouse (int button, int state, int x1, int y1)
 {
-	static GLintPoint corner[2];
+	static GLintPoint corner[3];
 	//static int numCorners = 0;
 	if (button == GLUT_LEFT_BUTTON && state ==GLUT_DOWN)
 	{		
@@ -224,20 +315,23 @@ void myMouse (int button, int state, int x1, int y1)
 		numCorners++;
 		if (numCorners == 2)
 		{
-			//glColor3f(0.0,0.0,1.0);
-		
-			if(sxhma == 2)//create an ellipse with Bresenham
-			{
-				//glColor3f(1.0,0.0,0.0);
-				glRecti(corner[0].x, corner[0].y, corner[1].x, corner[1].y);
-			}
 			if (sxhma == 1)//create line with Bresenham
 			{
 				glColor3f(0.0,0.0, 1.0);
 				bresenhamLine(corner[0].x, corner[0].y, corner[1].x, corner[1].y);
 			}
-			numCorners =0;
+            if(sxhma == 0 || sxhma == 1)
+			    numCorners =0;
 		}
+        if(numCorners == 3){
+            //glColor3f(0.0,0.0,1.0);
+			if(sxhma == 2)//create an ellipse with Bresenham
+			{
+				//glColor3f(1.0,0.0,0.0);
+				bresenhamEllipse(corner[0].x, corner[0].y, corner[1].x, corner[1].y, corner[2].x, corner[2].y);
+			}
+            numCorners =0;
+        }
 	}
 	else if (button == GLUT_MIDDLE_BUTTON && state == GLUT_DOWN)
 		glClear(GL_COLOR_BUFFER_BIT);  // clear the window
