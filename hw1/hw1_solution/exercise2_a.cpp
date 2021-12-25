@@ -59,11 +59,11 @@ void drawEllipsePoints(int x, int y, int xc, int yc){
 void plotEllipse(int a, int b, int xc, int yc){
     //set initial values 1st region
     int x = a, y = 0; //Starting point
-    int a_sq_2 = 2 * a*a; 
+    int a_sq_2 = 2*a*a; 
     int b_sq_2 = 2*b*b; 
     
-    int xchange = (b^2)*(1 - 2*a);
-    int ychange = a^2;
+    int xchange = (b*b)*(1 - 2*a);
+    int ychange = a*a;
 
     int xstop = b_sq_2*a;
     int ystop = 0;
@@ -89,8 +89,8 @@ void plotEllipse(int a, int b, int xc, int yc){
     //set initial values 2nd region
     x = 0, y = b; //Starting point
 
-    xchange = (b^2);
-    ychange = (a^2)*(1 - 2*b);
+    xchange = b*b;
+    ychange = (a*a)*(1 - 2*b);
 
     xstop = 0;
     ystop = a_sq_2*b;
