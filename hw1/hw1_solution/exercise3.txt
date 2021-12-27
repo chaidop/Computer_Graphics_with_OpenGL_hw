@@ -1,0 +1,131 @@
+https://www.geeksforgeeks.org/scan-line-polygon-filling-using-opengl-c/
+
+0. First, initialize all edges of the shape to an edge bucket struct type, containing all info 
+about that edge like its y-max, y-min, its current x and the x slope to increment for each step
+of the algorithm.
+
+do not include horizontal lines
+
+1.The second step is to create the active edge table.
+ We will process the polygon from line=0 up till line<height of polygon,
+edge after edge, and store in the active edge Table.
+
+2. Storing is done by storing the edge in the same scanline edge tuple as 
+   the lowermost point's y-coordinate value of the edge.
+   
+3. After addition of any edge in an edge tuple, the tuple is 
+   sorted using insertion sort, according to its minimum x-current value.
+   Then the list is added to the line-th position of the active edge table.
+
+4. After the whole polygon is added to the active edge table, 
+   the figure is now filled.
+   
+5. Filling algorithm is started from the first scanline at the bottom,
+   and continued till the top (line<height).
+   
+while(line<height):
+6. Now the active edge table is taken and the following things 
+   are repeated for each scanline:
+       i. Copy all edge buckets of the designated scanline 
+          to the active edge tuple
+       ii. Perform an insertion sort according
+          to the minimum x-current values
+       iii. Remove all edge buckets whose ymax is equal 
+            or greater than the scanline
+       iv. Fillup pairs of edges in active tuple
+       Check if 2 cases can arrive-
+                    1. point right on the edge , on the rightmost edge DO NOT DRAW
+                    2. point right on the edge , on the top edge DO NOT DRAW
+           
+       v. Update the x-current of each active edge, by incrementing it by
+        x-slope value of each edge.
+       
+7. increment the line.
+
+
+==================== FOR THE PICTURE ==================
+
+First initialize all edges:
+
+	AB{
+		ymax:5
+		xcurrent:4
+		xslope:-4/3
+	}
+	AJ{
+		horizontal DONT ADD
+	}
+	JI{
+		ymax:3
+		xcurrent:7
+		xslope:1/2
+	}
+	HI{
+		ymax:3
+		xcurrent:10
+		xslope:-2
+	}
+	HG{
+		ymax:5
+		xcurrent:10
+		xslope:2/3
+	}
+	BC{
+		ymax:6
+		xcurrent:1
+		xslope:3
+	}
+	FG{
+		ymax:6
+		xcurrent:12
+		xslope:-2
+	}
+	CD{
+		ymax:8
+		xcurrent:4
+		xslope:1/2
+	}
+	FE{
+		ymax:8
+		xcurrent:10
+		xslope:1/2
+	}
+	DE{
+		horizontal DONT DRAW
+	}
+	
+Then add them into tuples, sort each tuple by minimum x and then
+insert into the active edge table:
+
+Active Edge Table:
+	8=>
+	7=>
+	6=>|CD|>|EF|
+	5=>|BC|>|FG|
+	4=>
+	3=>
+	2=>|HI|>|GH|
+	1=>|AB|>|JI|
+	
+Start the algorithm
+
+line=1:
+	DRAW: (4,1) (5,1) (6,1)
+line=2:
+	DRAW: (4,2) (5,2) (6,2) (7,2)
+line=3:
+	DRAW: (3,3) (4,3) (5,3) (6,3) (7,3) (8,3) (9,3) (10,3)
+line=4:
+	DRAW: (2,4) (3,4) (4,4) (5,4) (6,4) (7,4) (8,4) (9,4) (10,4) (11,4)
+line=5:
+	DRAW: (1,5) (2,5) (3,5) (4,5) (5,5) (6,5) (7,5) (8,5) (9,5) (10,5) (11,5)
+line=6:
+	DRAW: (4,6) (5,6) (6,6) (7,6) (8,6) (9,6) 
+line=7:
+	DRAW: (5,7) (6,7) (7,7) (8,7) (9,7) (10,7) 
+line=8:
+	DRAW: TIPOTA
+============ CONS ===================:
+Sliver polygons may not be drawn correctly (SEE DIALEKSEIS, 2021.11.18_04.pdf)
+
+
