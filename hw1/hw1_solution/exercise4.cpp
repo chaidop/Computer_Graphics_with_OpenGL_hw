@@ -8,8 +8,16 @@
 #define maxWd 600
 #define maxVer 10 //max edges for polygon
 #define POLYGON 1
+#define POINTS 0
 #define FILLING 2
-#define CLEAR_SCREEN 3
+#define COLOR 2
+#define LINE_RED_COLOR 3
+#define LINE_GREEN_COLOR 4
+#define LINE_BLUE_COLOR 5
+#define CLEAR_SCREEN 6
+
+int menu; // for menu creation
+int selection; // for menu choices
 
 int sxhma = 0;
 int numCorners = 0;
@@ -20,6 +28,7 @@ int numCorners = 0;
  }
  GLintPoint;
 
+static GLintPoint corner[10];
 
 void drawPoint( int ax, int ay)
 {
@@ -446,7 +455,7 @@ void myMenu(int selection)
 {
 	switch(selection) {
 
-		case POLYGON: // drawing  line
+		case POINTS: // drawing  line
 			sxhma=1;
 			numCorners = 0;
 			glutPostRedisplay(); // put comments to see what happens
@@ -454,15 +463,39 @@ void myMenu(int selection)
 
 		case FILLING: // drawing rectangle
 			sxhma=2;
+			//First create the polygon lines
+			drawPolygon(corner, numCorners);
+
+			//Then color it
+			//initialise the edge table
+			initEdgeTable();
+			//assuming corners array is intact and has all vertices saved,
+			//store edges in the edge table
+			for(int j = 0; j < numCorners - 2; j++)
+				storeEdgeInTable(corner[j].x, corner[j].y, corner[j+1].x, corner[j+1].y);//storage of edges in edge table.
+			storeEdgeInTable(corner[numCorners - 1].x, corner[numCorners - 1].y, corner[0].x, corner[0].y);//storage of edges in edge table.
+			ScanlineFill();
 			numCorners = 0;
 			glutPostRedisplay();
+
 			break;
 
 		case CLEAR_SCREEN:
 			glClear(GL_COLOR_BUFFER_BIT);  // clear the window
+			numCorners = 0;
 			glFlush();
 			break;
+		case LINE_RED_COLOR:
+			glColor3f(1.0,0.0,0.0);
+			break;
 
+		case LINE_GREEN_COLOR:
+			glColor3f(0.0,1.0,0.0);
+			break;
+
+		case LINE_BLUE_COLOR:
+			glColor3f(0.0,0.0,1.0);
+			break;
 		default:
 			printf("Invalid menu selection\n");
 			break;
@@ -472,29 +505,28 @@ void myMenu(int selection)
 //Specifying a polygon with the mouse
 void myMouse (int button, int state, int x1, int y1)
 {
-	static GLintPoint corner[10];
+	
 	//static int numCorners = 0;
 	if (button == GLUT_LEFT_BUTTON && state ==GLUT_DOWN)
 	{		
-
-		corner[numCorners].x =x1;
-		corner[numCorners].y = maxHt - y1;
-		drawPoint(corner[numCorners].x,corner[numCorners].y);
-		if(sxhma > 0){
-			printf("Point %d added (%d,%d) \n", numCorners,  corner[numCorners].x, corner[numCorners].y);
-			numCorners++;
+		if(sxhma == 1){
+			if(numCorners < 10 ){ //reset, clear window???
+				corner[numCorners].x =x1;
+				corner[numCorners].y = maxHt - y1;
+				drawPoint(corner[numCorners].x,corner[numCorners].y);
+				numCorners++;
+				
+        	}
+			else{
+				printf("MAX POINTS, CLEAR SCREEN\n");
+			}
 		}
-        if(numCorners == 11 ){ //reset, clear window???
-			printf("MAX POINTS, RESETING\n");
-			glClear(GL_COLOR_BUFFER_BIT);  // clear the window
-			glFlush();
-            numCorners = 0;
-        }
+		
 		if (numCorners >= 2){ //NEED 2 POINTS TO CALL DRAWLINE
 							
 			//glColor3f(0.0,0.0,1.0);
 		
-			if(sxhma == 1) //if polygon
+			if(sxhma == 5) //if polygon
 			{
 				
 				glColor3f(0.0,0.0,1.0);
@@ -506,7 +538,7 @@ void myMouse (int button, int state, int x1, int y1)
 				
 				//clear corner array (?????????)
 			}
-			if (sxhma == 2) //Call ScanLineFill algorithm
+			if (sxhma == 6) //Call ScanLineFill algorithm
 			{
 				//glColor3f(0.0,1.0, 0.0);
 				//First initialise the edge table
@@ -533,6 +565,8 @@ int main(int argc, char** argv){
 		printf( "Could not open file" ) ;
 		return;
 	}*/
+	int menu, polyColorSubmenu;
+
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
 	glutInitWindowSize(maxHt,maxWd);
@@ -540,9 +574,16 @@ int main(int argc, char** argv){
 	glutInitWindowPosition(1,1);
 	glutCreateWindow("Scanline filled dinosaur");
 
+	// Create a two-level pop-up menu
+	polyColorSubmenu = glutCreateMenu(myMenu);
+	glutAddMenuEntry("Red", LINE_RED_COLOR);
+	glutAddMenuEntry("Green", LINE_GREEN_COLOR);
+	glutAddMenuEntry("Blue", LINE_BLUE_COLOR);
+
     glutCreateMenu(myMenu);
-	glutAddMenuEntry("Polygon (max 10)", POLYGON);
-	glutAddMenuEntry("Fill polygon", FILLING);
+	glutAddMenuEntry("Mark polygon vertices (max 10)", POINTS);
+	glutAddMenuEntry("Create & color polygon", FILLING);
+	glutAddSubMenu("Choose color", polyColorSubmenu);
 	glutAddMenuEntry("Clear Screen", CLEAR_SCREEN);
 
 	// register menu to right mouse button
@@ -553,5 +594,8 @@ int main(int argc, char** argv){
 	glutDisplayFunc(myDisplay);
 	
 	glutMainLoop();
+
+	glutDestroyMenu(polyColorSubmenu);
+	glutDestroyMenu(menu);
 	return 0;
 }
