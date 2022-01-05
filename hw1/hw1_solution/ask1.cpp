@@ -10,7 +10,7 @@
 #include <stdio.h>
 
 #define LINE 1
-#define RECTANGLE 2
+#define ELIPSE 2
 #define LINE_RED_COLOR 3
 #define LINE_GREEN_COLOR 4
 #define LINE_BLUE_COLOR 5
@@ -23,6 +23,7 @@ int menu; // for menu creation
 int selection; // for menu choices
 int sxhma; // for drawing line or rectangle
 int numCorners = 0;
+float rgb[3]={0.0, 0.0, 1.0};
 
  typedef struct 
  { 
@@ -30,6 +31,93 @@ int numCorners = 0;
  }
  GLintPoint;
 
+ void drawEllipsePoints(int x, int y, int xc, int yc){
+    //point in quadrant 1
+    glBegin(GL_POINTS);
+		glVertex2i(xc + x, yc + y);
+	glEnd();
+    //point in quadrant 2
+    glBegin(GL_POINTS);
+		glVertex2i(xc - x, yc + y);
+	glEnd();
+    //point in quadrant 3
+    glBegin(GL_POINTS);
+		glVertex2i(xc - x, yc - y);
+	glEnd();
+    //point in quadrant 4
+    glBegin(GL_POINTS);
+		glVertex2i(xc + x, yc - y);
+	glEnd();
+	glFlush();
+}
+//bresenham ellipse
+void plotEllipse(int a, int b, int xc, int yc){
+    //set initial values 1st region
+    int x = a, y = 0; //Starting point
+    int a_sq_2 = 2*a*a; 
+    int b_sq_2 = 2*b*b; 
+    
+    int xchange = (b*b)*(1 - 2*a);
+    int ychange = a*a;
+
+    int xstop = b_sq_2*a;
+    int ystop = 0;
+    //error rate
+    int e0 = 0;
+    //int D = 4*(b^2) + ((a^2)*(1 - 4*b)-2);
+
+    while(xstop >= ystop){      //1st quadrant, 4 first points
+        drawEllipsePoints(x, y, xc, yc);
+        y = y + 1;
+        ystop += a_sq_2;
+        e0 += ychange;
+        ychange += a_sq_2;
+        if((2*e0 + xchange) > 0){
+            x = x -1;
+            xstop = xstop - b_sq_2;
+            e0 = e0 + xchange;
+            xchange = xchange + b_sq_2;
+        }
+
+    }
+
+    //set initial values 2nd region
+    x = 0, y = b; //Starting point
+
+    xchange = b*b;
+    ychange = (a*a)*(1 - 2*b);
+
+    xstop = 0;
+    ystop = a_sq_2*b;
+    //error rate
+    e0 = 0;
+    //int D = 4*(b^2) + ((a^2)*(1 - 4*b)-2);
+
+    while(xstop <= ystop){      //4 second points, dy<-1
+        drawEllipsePoints(x, y, xc, yc);
+        x = x + 1;
+        xstop += b_sq_2;
+        e0 += xchange;
+        xchange += b_sq_2;
+        if((2*e0 + ychange) > 0){
+            y = y -1;
+            ystop = ystop - a_sq_2;
+            e0 = e0 + ychange;
+            ychange = ychange + a_sq_2;
+        }
+
+    }
+
+    
+}
+void bresenhamEllipse(int xc, int yc, int xa, int ya, int xb, int yb)
+{
+    //initial values of algorithm
+    int a = abs(xc - xa);
+    int b = abs(yc - yb);
+    plotEllipse(a, b, xc, yc);
+
+}
 
 void drawPoint( int ax, int ay)
 {
@@ -46,9 +134,14 @@ void drawLine(int x1, int y1, int x2, int y2)
 	int y = y1; // changes to y2 if y2 < y1
 	int m = 0;
 	int k = 1;
+
 	dy = y2 - y1;
 	dx = x2 - x1;
 	
+	float slope = dy/dx;
+	float w = 1 - slope;
+	float e = m*x1 - y1 +0.5;	// CHANGE
+
 	int yi = 1; //value of increase
 	printf("(%d, %d) -> (%d, %d)\n", x1, y1, x2, y2);
 	
@@ -101,20 +194,29 @@ void drawLine(int x1, int y1, int x2, int y2)
    {	
       // Slope error reached limit, time to
       // increment y and update slope error.
+      
       if (pk < 0)
       {
          pk += 2*dy;
+		 if(e < w){
+			 e += m;
+		 }
       }
 	  else{ 
 		  pk  += 2*(dy-dx);
+		  if(e > w){
+			 e -= w;
+			}
 		  y += yi;
 	  }
 	  if( m > 1){
 		//printf("m>1  \n");
+		glColor3f(rgb[0]*pk,rgb[1]*pk,rgb[2]*pk);
 		drawPoint(y , x + 1);
 	  }
 	  else{
 		  //printf("m<1 \n");
+		  glColor3f(rgb[0]*pk,rgb[1]*pk,rgb[2]*pk);
 		  drawPoint(x + 1, y);
 	  }
    }
@@ -148,12 +250,12 @@ void myDisplay(void)
 	glFlush();							// send all output to display
 }
 
- //Specifying a rectangle with the mouse
+//Specifying a rectangle with the mouse
 void myMouse (int button, int state, int x1, int y1)
 {
-	static GLintPoint corner[2];
+	static GLintPoint corner[3];
 	//static int numCorners = 0;
-	if (button == GLUT_LEFT_BUTTON && state ==GLUT_DOWN)
+	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN)
 	{		
 		corner[numCorners].x =x1;
 		corner[numCorners].y = screenHeight-y1;
@@ -163,13 +265,6 @@ void myMouse (int button, int state, int x1, int y1)
 		{
 			//glColor3f(0.0,0.0,1.0);
 		
-			if(sxhma == 2)
-			{
-				
-				//glColor3f(1.0,0.0,0.0);
-				
-				glRecti(corner[0].x, corner[0].y, corner[1].x, corner[1].y);
-			}
 			if (sxhma == 1)
 			{
 				//glColor3f(0.0,1.0, 0.0);
@@ -181,9 +276,19 @@ void myMouse (int button, int state, int x1, int y1)
 				else{
 					drawLine(corner[0].x, corner[0].y, corner[1].x, corner[1].y);
 				}	
+				numCorners =0;
+			}
+
+			
+		}
+		if(numCorners == 3){
+			if(sxhma == 2){
+				bresenhamEllipse(corner[0].x, corner[0].y, corner[1].x, corner[1].y, corner[2].x, corner[2].y);
+
 			}
 			numCorners =0;
 		}
+	
 	}
 	else if (button == GLUT_MIDDLE_BUTTON && state == GLUT_DOWN)
 		glClear(GL_COLOR_BUFFER_BIT);  // clear the window
@@ -217,21 +322,30 @@ void myMenu(int selection)
 			glutPostRedisplay(); // put comments to see what happens
 			break;
 
-		case RECTANGLE: // drawing rectangle
+		case ELIPSE: // drawing elipse
 			sxhma=2;
 			numCorners = 0;
 			glutPostRedisplay();
 			break;
 
 		case LINE_RED_COLOR:
+            rgb[0] = 1.0;
+            rgb[1]= 0.0;
+            rgb[2]=0.0;
 			glColor3f(1.0,0.0,0.0);
 			break;
 
 		case LINE_GREEN_COLOR:
+            rgb[0] = 0.0;
+            rgb[1]= 1.0;
+            rgb[2]=0.0;
 			glColor3f(0.0,1.0,0.0);
 			break;
 
 		case LINE_BLUE_COLOR:
+            rgb[0] = 0.0;
+            rgb[1]= 0.0;
+            rgb[2]= 1.0;
 			glColor3f(0.0,0.0,1.0);
 			break;
 
@@ -281,7 +395,7 @@ int main(int argc, char **argv)
 	// menu creation
 	menu = glutCreateMenu(myMenu);
 	glutAddMenuEntry("Line", LINE);
-	glutAddMenuEntry("Rectangle", RECTANGLE);
+	glutAddMenuEntry("Ellipse", ELIPSE);
 	glutAddSubMenu("Color", lineColorSubmenu);
 	glutAddMenuEntry("Clear Screen", CLEAR_SCREEN);
 
