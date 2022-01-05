@@ -7,8 +7,7 @@
 #define maxHt 600
 #define maxWd 600
 #define maxVer 10 //max edges for polygon
-#define POLYGON 1
-#define POINTS 0
+#define POINTS 1
 #define FILLING 2
 #define COLOR 2
 #define LINE_RED_COLOR 3
@@ -21,7 +20,7 @@ int selection; // for menu choices
 
 int sxhma = 0;
 int numCorners = 0;
-
+float rgb[3]={0.0, 0.0, 1.0};
  typedef struct 
  { 
 	 GLint x,y;
@@ -49,12 +48,14 @@ void drawPolygon( GLintPoint vertices[], int size)
 {
 	int count = 0;
 	
-	while(count < size- 2){
+	while(count < size - 1){
+        drawPoint(vertices[count].x, vertices[count].y);
 		drawLine(vertices[count].x, vertices[count].y, vertices[count + 1].x, vertices[count + 1].y);
 		count++;
 	}
-
-	
+    drawPoint(vertices[size- 1].x, vertices[size- 1].y);
+	drawLine(vertices[size- 1].x, vertices[size - 1].y, vertices[0].x, vertices[0].y);
+    printf("HELLO %d", size);
 	/*glBegin(GL_POLYGON);
 	for(int i = 0; i < size; i++){
 		glVertex2i(vertices[i].x,vertices[i].y);
@@ -112,7 +113,7 @@ void printList(EdgeTableList *list)
 		
 		for (j=0; j<list->countEdgeBucket; j++)
 		{
-			printf(" %d+%.2f+%.2f",
+			printf("%d) %d+%.2f+%.2f", j,
 			list->buckets[j].ymax, list->buckets[j].xcur,list->buckets[j].slopeinverse);
 		}
 }
@@ -190,7 +191,7 @@ void storeEdgeInTable (int x1,int y1, int x2, int y2)
 	if (y2==y1)
 		return;
 		
-	minv = (float)1.0/m;
+	minv = (float)1.0/m;//inverse slope
 	printf("\nSlope string for %d %d & %d %d: %f",x1,y1,x2,y2,minv);
 	}
 	
@@ -236,7 +237,7 @@ void removeEdgeByYmax(EdgeTableList *activeList,int yy)
 }	
 
 
-void updatexbyslopeinv(EdgeTableList *activeList)
+void updatexbyslopeinv(EdgeTableList *activeList)//update x coord when scanline (y) changes, by the slope of each edge
 {
 	int i;
 	
@@ -263,7 +264,7 @@ void ScanlineFill()
 	// Repeat until last scanline:
 	for (i=0; i<maxHt; i++)//4. Increment y by 1 (next scan line)
 	{
-		
+		printList(&ActiveEdgeList);
 		// 1. Add to the AEL all the edges from the current
 		// AET position, so those edges whose ymin = y (entering edges)
 		for (j=0; j<EdgeTable[i].countEdgeBucket; j++)
@@ -272,7 +273,7 @@ void ScanlineFill()
 					ymax,EdgeTable[i].buckets[j].xcur,
 					EdgeTable[i].buckets[j].slopeinverse);
 		}
-		printList(&ActiveEdgeList);
+		//printList(&ActiveEdgeList);
 		
 		// 2. Remove from AET those edges for
 		// which y=ymax (not involved in next scan line)
@@ -281,19 +282,19 @@ void ScanlineFill()
 		//sort AET (remember: EL is presorted) according to x ascending
 		insertionSort(&ActiveEdgeList);
 		
-		printList(&ActiveEdgeList);
+		
 		
 		//3. Fill lines on scan line y by using pairs of x-coords from AET
 		j = 0;
 		FillFlag = 0;
-		coordCount = 0;
+		coordCount = 0; // arithmos shmeiwn tomhs, an perittos, tote to trexoshmeio einai mesa sto polygono-> color it, alliws an artios einai ektos
 		x1 = 0;
 		x2 = 0;
 		ymax1 = 0;
 		ymax2 = 0;
 		while (j<ActiveEdgeList.countEdgeBucket)
 		{
-			if (coordCount%2==0)
+			if (coordCount%2==0) // ana 2, pairnei zeygh shmeiwn apo ta edges kai zwgrafizei anamesa tous, analoga me arithmo intersections
 			{
 				x1 = (int)(ActiveEdgeList.buckets[j].xcur);
 				ymax1 = ActiveEdgeList.buckets[j].ymax;
@@ -304,21 +305,19 @@ void ScanlineFill()
 					2. lines are towards bottom
 					3. one line is towards top and other is towards bottom
 				*/
-					if (((x1==ymax1)&&(x2!=ymax2))||((x1!=ymax1)&&(x2==ymax2)))
+					if (((x1==ymax1)&&(x2!=ymax2))||((x1!=ymax1)&&(x2==ymax2)))//Case 3
 					{
 						x2 = x1;
 						ymax2 = ymax1;
 					}
-				
 					else
 					{
 						coordCount++;
 					}
 				}
-				
 				else
 				{
-						coordCount++;
+					coordCount++;
 				}
 			}
 			else
@@ -331,55 +330,54 @@ void ScanlineFill()
 				// checking for intersection...
 				if (x1==x2)
 				{
-				/*three cases can arrive-
-					1. lines are towards top of the intersection
-					2. lines are towards bottom
-					3. one line is towards top and other is towards bottom
+				/*three cases can arrive to check for intersection-
+					1. both lines are towards top of the intersection, local minima, count as 2 intersections
+					2. lines are towards bottom, local maxima, do not count
+					3. one line is towards top and other is towards bottom, count as 1 intersecition
 				*/
-					if (((x1==ymax1)&&(x2!=ymax2))||((x1!=ymax1)&&(x2==ymax2)))
+					if (((x1==ymax1)&&(x2!=ymax2))||((x1!=ymax1)&&(x2==ymax2)))// Case 3, count 1 intersection
 					{
-						x1 = x2;
+						x1 = x2;	
 						ymax1 = ymax2;
 					}
 					else
 					{
+						if((x1!=ymax1)&&(x2!=ymax2) && (ymax1!=ymax2))//Case 1, (ymax1!=ymax2) to check if not the sane point, condition from above
+							FillFlag = 1;
 						coordCount++;
-						FillFlag = 1;
+						//FillFlag = 1;
 					}
 				}
-				else
+				else//draw line inbetween the x1 and x2
 				{
-						coordCount++;
-						FillFlag = 1;
+					coordCount++;
+					FillFlag = 1;
 				}
 			
 			
-			if(FillFlag)
-			{
-				//drawing actual lines...
-				glColor3f(0.0f,0.7f,0.0f);
-				
-				glBegin(GL_LINES);
-				glVertex2i(x1,i);
-				glVertex2i(x2,i);
-				glEnd();
-				glFlush();		
-				
-				// printf("\nLine drawn from %d,%d to %d,%d",x1,i,x2,i);
-			}
-			
-		}
-			
-		j++;
-	}
-			
-		
-	// 5. For each nonvertical edge remaining in AET, update x for new y
-	updatexbyslopeinv(&ActiveEdgeList);
-}
+                if(FillFlag)
+                {
+                    //drawing actual lines...
+                    glColor3f(rgb[0],rgb[1],rgb[2]);
+                    
+                    glBegin(GL_LINES);
+                    glVertex2i(x1,i);
+                    glVertex2i(x2,i);
+                    glEnd();
+                    glFlush();		
+                    
+                    // printf("\nLine drawn from %d,%d to %d,%d",x1,i,x2,i);
+                }  
+            }
+                
+            j++;
+	    }
+            
+        // 5. For each nonvertical edge remaining in AET, update x for new y by its slope
+        updatexbyslopeinv(&ActiveEdgeList);
+    }
 
-
-printf("\nScanline filling complete");
+    printf("\nScanline filling complete");
 
 }
 
@@ -463,21 +461,26 @@ void myMenu(int selection)
 
 		case FILLING: // drawing rectangle
 			sxhma=2;
-			//First create the polygon lines
-			drawPolygon(corner, numCorners);
-
-			//Then color it
-			//initialise the edge table
-			initEdgeTable();
-			//assuming corners array is intact and has all vertices saved,
-			//store edges in the edge table
-			for(int j = 0; j < numCorners - 2; j++)
-				storeEdgeInTable(corner[j].x, corner[j].y, corner[j+1].x, corner[j+1].y);//storage of edges in edge table.
-			storeEdgeInTable(corner[numCorners - 1].x, corner[numCorners - 1].y, corner[0].x, corner[0].y);//storage of edges in edge table.
-			ScanlineFill();
-			numCorners = 0;
+            //First create the polygon lines
+            /*drawPolygon(corner, numCorners);
+            if(numCorners > 2 ){
+                //Then color it
+                //initialise the edge table
+                initEdgeTable();
+                //assuming corners array is intact and has all vertices saved,
+                //store edges in the edge table
+                for(int j = 0; j < numCorners - 1; j++)
+                    storeEdgeInTable(corner[j].x, corner[j].y, corner[j+1].x, corner[j+1].y);//storage of edges in edge table.
+                storeEdgeInTable(corner[numCorners - 1].x, corner[numCorners - 1].y, corner[0].x, corner[0].y);//storage of edges in edge table.
+               
+                ScanlineFill();
+                
+                numCorners = 0;
+            }
+			printf("\n=====Table============");
+	        printTable();
+			glFlush();*/
 			glutPostRedisplay();
-
 			break;
 
 		case CLEAR_SCREEN:
@@ -486,14 +489,23 @@ void myMenu(int selection)
 			glFlush();
 			break;
 		case LINE_RED_COLOR:
+            rgb[0] = 1.0;
+            rgb[1] = 0.0;
+            rgb[2] = 0.0;
 			glColor3f(1.0,0.0,0.0);
 			break;
 
 		case LINE_GREEN_COLOR:
+            rgb[0] = 0.0;
+            rgb[1] = 1.0;
+            rgb[2] = 0.0;
 			glColor3f(0.0,1.0,0.0);
 			break;
 
 		case LINE_BLUE_COLOR:
+            rgb[0] = 0.0;
+            rgb[1] = 0.0;
+            rgb[2] = 1.0;
 			glColor3f(0.0,0.0,1.0);
 			break;
 		default:
@@ -509,8 +521,8 @@ void myMouse (int button, int state, int x1, int y1)
 	//static int numCorners = 0;
 	if (button == GLUT_LEFT_BUTTON && state ==GLUT_DOWN)
 	{		
-		if(sxhma == 1){
-			if(numCorners < 10 ){ //reset, clear window???
+		if(sxhma == 1){ //set points
+			if(numCorners < 10 ){ //maximum points
 				corner[numCorners].x =x1;
 				corner[numCorners].y = maxHt - y1;
 				drawPoint(corner[numCorners].x,corner[numCorners].y);
@@ -522,36 +534,30 @@ void myMouse (int button, int state, int x1, int y1)
 			}
 		}
 		
-		if (numCorners >= 2){ //NEED 2 POINTS TO CALL DRAWLINE
-							
-			//glColor3f(0.0,0.0,1.0);
 		
-			if(sxhma == 5) //if polygon
-			{
-				
-				glColor3f(0.0,0.0,1.0);
-				printf("!!!!!!!!  Line %d (%d,%d)->(%d,%d) \n !!!!!!!!!!!!", numCorners,  corner[numCorners-2].x, corner[numCorners-2].y, corner[numCorners-1].x, corner[numCorners-1].y);
-				drawLine(corner[numCorners - 2].x, corner[numCorners - 2].y, corner[numCorners -1].x, corner[numCorners -1].y);
-				
-				//if()// ATLEAST 3 POINTS TO MAKE POLYGON
-				//drawPolygon(corner, numCorners);
-				
-				//clear corner array (?????????)
-			}
-			if (sxhma == 6) //Call ScanLineFill algorithm
-			{
-				//glColor3f(0.0,1.0, 0.0);
-				//First initialise the edge table
-				initEdgeTable();
-				//assuming corners array is intact and has all vertices saved,
-				//store edges in the edge table
-				for(int j = 0; j < numCorners - 2; j++)
-					storeEdgeInTable(corner[j].x, corner[j].y, corner[j+1].x, corner[j+1].y);//storage of edges in edge table.
-				storeEdgeInTable(corner[numCorners - 1].x, corner[numCorners - 1].y, corner[0].x, corner[0].y);//storage of edges in edge table.
-				ScanlineFill();
-			}
-		}
-	}
+        if(sxhma == 2) //create and fill polygon
+        {
+            
+            //First create the polygon lines
+            drawPolygon(corner, numCorners);
+			
+            if(numCorners > 2 ){
+                //Then color it
+                //initialise the edge table
+                initEdgeTable();
+                //assuming corners array is intact and has all vertices saved,
+                //store edges in the edge table
+                for(int j = 0; j < numCorners - 1; j++)
+                    storeEdgeInTable(corner[j].x, corner[j].y, corner[j+1].x, corner[j+1].y);//storage of edges in edge table.
+                storeEdgeInTable(corner[numCorners - 1].x, corner[numCorners - 1].y, corner[0].x, corner[0].y);//storage of edges in edge table.
+                printf("\nTable");
+	            printTable();
+                ScanlineFill();
+                
+                numCorners = 0;
+            }
+        }
+    }
 	else if (button == GLUT_MIDDLE_BUTTON && state == GLUT_DOWN)
 		glClear(GL_COLOR_BUFFER_BIT);  // clear the window
 	glFlush();
